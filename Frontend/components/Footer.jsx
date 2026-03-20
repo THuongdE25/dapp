@@ -38,9 +38,7 @@ function Footer() {
             </div>
           </div>
         </div>
-        <div className="footer-bottom text-center py-3">
-          © 2026 Cake Shop - All Rights Reserved
-        </div>
+        <div className="footer-bottom text-center py-3">© 2026 Cake Shop - All Rights Reserved</div>
       </footer>
     </>
   );

@@ -1,4 +1,9 @@
+import { Link } from "react-router-dom";
+import { useContext } from "react";
+import { CartContext } from "../pages/CartContext";
 function Navbar() {
+  const { cart } = useContext(CartContext);
+  // const totalQty = cart.reduce((sum, item) => sum + item.quantity, 0);
   return (
     <>
       <div className="color">
@@ -9,7 +14,7 @@ function Navbar() {
         </div>
 
         <nav className="navbar navbar-expand-lg navbar-dark shadow-sm">
-          <div className="container">
+          <div className="container hover-nav">
             <button
               className="navbar-toggler"
               type="button"
@@ -22,36 +27,72 @@ function Navbar() {
             <div className="collapse navbar-collapse" id="navbarMenu">
               <ul className="navbar-nav">
                 <li className="nav-item me-3">
-                  <a className="nav-link text-white" href="#">
+                  <Link className="nav-link text-white" to="/">
                     Trang chủ
-                  </a>
+                  </Link>
                 </li>
 
-                <li className="nav-item me-3">
-                  <a className="nav-link text-white" href="#">
+                <li className="nav-item dropdown me-3">
+                  <Link
+                    className="nav-link dropdown-toggle text-white"
+                    to="/cakes"
+                    role="button"
+                    data-bs-toggle="dropdown"
+                  >
                     Bánh sinh nhật
-                  </a>
+                  </Link>
+                  <ul className="dropdown-menu">
+                    <li>
+                      <Link className="dropdown-item" to="/cakes/petit">
+                        Bánh Petit
+                      </Link>
+                    </li>
+
+                    <li>
+                      <Link className="dropdown-item" to="/cakes/tiramisu">
+                        Bánh Tiramisu
+                      </Link>
+                    </li>
+
+                    <li>
+                      <Link className="dropdown-item" to="/cakes/fruit">
+                        Bánh Fruit
+                      </Link>
+                    </li>
+
+                    <li>
+                      <Link className="dropdown-item" to="/cakes/chocolate">
+                        Bánh Chocolate
+                      </Link>
+                    </li>
+
+                    <li>
+                      <Link className="dropdown-item" to="/cakes/yogurt">
+                        Bánh Yogurt
+                      </Link>
+                    </li>
+                  </ul>
                 </li>
 
                 <li className="nav-item me-3">
-                  <a className="nav-link text-white" href="#">
-                    Tin Tức
-                  </a>
+                  <Link className="nav-link text-white" to="/news">
+                    Tin tức
+                  </Link>
                 </li>
               </ul>
 
               <ul className="navbar-nav ms-auto">
                 <li className="nav-item me-3">
-                  <a className="nav-link text-white" href="#">
+                  <Link className="nav-link text-white" to="/cart">
                     🛒 Giỏ hàng
-                    <span className="badge bg-danger ms-1">0</span>
-                  </a>
+                    <span className="badge bg-danger ms-1">{cart.length}</span>
+                  </Link>
                 </li>
 
                 <li className="nav-item">
-                  <a className="nav-link login text-white" href="#">
+                  <Link className="nav-link login text-white" to="/login">
                     Đăng Nhập
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>

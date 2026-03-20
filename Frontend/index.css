@@ -79,3 +79,42 @@ body {
 .footer-bottom {
   background-color: #6d472e;
 }
+.hover-nav a:hover {
+  text-decoration: underline;
+}
+.dropdown:hover .dropdown-menu {
+  display: block;
+}
+.product-box {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.product-img {
+  border-radius: 10px;
+}
+
+.product-info {
+  padding-left: 30px;
+}
+
+.product-price {
+  font-size: 24px;
+  font-weight: bold;
+  color: #6b3a3a;
+}
+.size {
+  border-radius: 10px;
+  border: 1px solid #ddd;
+}
+.btn-cart {
+  background-color: #6b3a3a;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  color: white;
+  padding: 7px 20px;
+  font-size: 17px;
+  text-decoration: none;
+}

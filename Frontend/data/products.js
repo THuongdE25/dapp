@@ -73,7 +73,7 @@ const products = [
   },
   {
     id: 10,
-    name: "OPERA VUÔNG",
+    name: "OPERA CHOCOLATE",
     slug: "chocolate-02",
     featured: true,
     price: 690000,
@@ -81,7 +81,7 @@ const products = [
   },
   {
     id: 11,
-    name: "RED VELVET CAKE",
+    name: "CHOCOLATE VELVET CAKE",
     slug: "chocolate-03",
     featured: true,
     price: 690000,
