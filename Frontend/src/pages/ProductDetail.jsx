@@ -1,9 +1,8 @@
-import { Navigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useContext } from "react";
 import { CartContext } from "./CartContext";
 import ProductCatalog from "../data/ProductsCatalog";
-import { useNavigate } from "react-router-dom";
 
 function ProductDetail() {
   const { slug } = useParams();
@@ -13,7 +12,6 @@ function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
 
   const { addToCart } = useContext(CartContext);
-  const navigate = useNavigate();
 
   if (!product) return <h2>Không tìm thấy sản phẩm</h2>;
 
@@ -62,22 +60,7 @@ function ProductDetail() {
               >
                 Thêm vào giỏ hàng
               </button>
-              <button
-                className="btn-cart"
-                onClick={() => {
-                  navigate("/checkout", {
-                    state: {
-                      buyNowItem: {
-                        ...product,
-                        quantity,
-                        size,
-                      },
-                    },
-                  });
-                }}
-              >
-                Mua ngay
-              </button>
+              <button className="btn-cart">Mua ngay</button>
             </div>
           </div>
         </div>
