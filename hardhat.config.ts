@@ -6,9 +6,10 @@ const PRIVATE_KEY = "8c170b7178540bd5a946f5219ac9435d7cc3d03a6229cf4492449b317d9
 const config: HardhatUserConfig = {
   solidity: "0.8.28",
   networks: {
-    sapphire: {
+    sapphire_testnet: {
       url: "https://testnet.sapphire.oasis.dev",
       accounts: [PRIVATE_KEY],
+      chainId: 0x5aff,
     },
   },
 };
