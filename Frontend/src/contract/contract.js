@@ -406,9 +406,22 @@ const abi = [
       "type": "function"
     }
   ];
+export const getContractReadOnly = () => {
+  const provider = new ethers.JsonRpcProvider("https://testnet.sapphire.oasis.dev"); 
+  return new ethers.Contract(contractAddress, abi, provider);
+};
 
-export const getContract = async () => {
+export const getContractWithSigner = async () => {
+  if (!window.ethereum) {
+    alert("Vui lòng cài MetaMask!");
+    return;
+  }
+
   const provider = new ethers.BrowserProvider(window.ethereum);
+
+  await provider.send("eth_requestAccounts", []);
+
   const signer = await provider.getSigner();
+
   return new ethers.Contract(contractAddress, abi, signer);
 };
