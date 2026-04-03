@@ -51,8 +51,8 @@ function ProductDetail() {
     try {
       const contract = await getContractWithSigner();
 
-      const value =
-        ethers.parseEther(price.toString()) * BigInt(quantity);
+      const total = price * quantity;
+      const value = ethers.parseEther(total.toString());
 
       const tx = await contract.orderCake(product.id, quantity, {
         value,

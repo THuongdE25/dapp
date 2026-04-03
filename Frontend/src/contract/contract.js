@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 
-const contractAddress = "0x458d365DcDe5d023D0E72046A58949Aec95c4E5d";
+const contractAddress = "0x9f27D3ad335DDaadcb470317ABDF2364b77819e4";
 
 const abi = [
     {
@@ -425,3 +425,4 @@ export const getContractWithSigner = async () => {
 
   return new ethers.Contract(contractAddress, abi, signer);
 };
+export const getContract = getContractWithSigner;

@@ -22,7 +22,7 @@ contract BirthdayCakeShopSapphire {
     }
 
     mapping(uint => Cake) public cakes;
-    mapping(address => Order[]) private userOrders; 
+    mapping(address => uint[]) private userOrderIndexes;
     Order[] public orders;
 
     event CakeAdded(uint cakeId, string name, uint price);
@@ -38,8 +38,11 @@ contract BirthdayCakeShopSapphire {
     constructor() {
         owner = msg.sender;
 
-        addCake("Chocolate Cake", 0.01 ether);
-        addCake("Strawberry Cake", 0.02 ether);
+        addCake("MANGO CAKE", 0.01 ether);
+        addCake("CAPPUCCINO CAKE", 0.02 ether);
+        addCake("DREAM CAKE", 0.015 ether);
+        addCake("STRAWBERRY CAKE", 0.018 ether);
+        addCake("STRAWBERRY WHITE CAKE", 0.02 ether);
     }
 
     function addCake(string memory _name, uint _price) public onlyOwner {
@@ -55,16 +58,19 @@ contract BirthdayCakeShopSapphire {
     }
 
     function getCake(uint _id) public view returns (Cake memory) {
+        require(cakes[_id].id != 0, "Cake not found"); 
         return cakes[_id];
     }
 
     function orderCake(uint _cakeId, uint _quantity) public payable {
         require(_quantity > 0, "Invalid quantity");
-        Cake memory cake = cakes[_cakeId];
-        require(cake.id != 0 && cake.isAvailable, "Cake not available");
+
+        Cake storage cake = cakes[_cakeId]; 
+        require(cake.id != 0, "Cake not found");
+        require(cake.isAvailable, "Cake not available");
 
         uint total = cake.price * _quantity;
-        require(msg.value >= total, "Not enough ROSE");
+        require(msg.value >= total, "Not enough ETH");
 
         Order memory newOrder = Order({
             buyer: msg.sender,
@@ -74,11 +80,13 @@ contract BirthdayCakeShopSapphire {
             timestamp: block.timestamp,
             delivered: false
         });
-        orders.push(newOrder);
-        userOrders[msg.sender].push(newOrder);
 
-        if(msg.value > total){
-            payable(msg.sender).transfer(msg.value - total);
+        orders.push(newOrder);
+        userOrderIndexes[msg.sender].push(orders.length - 1);
+
+        if (msg.value > total) {
+            (bool success, ) = payable(msg.sender).call{value: msg.value - total}("");
+            require(success, "Refund failed");
         }
 
         emit CakeOrdered(msg.sender, _cakeId, _quantity, total);
@@ -89,11 +97,20 @@ contract BirthdayCakeShopSapphire {
     }
 
     function getMyOrders() public view returns (Order[] memory) {
-        return userOrders[msg.sender];
+        uint[] memory indexes = userOrderIndexes[msg.sender];
+        Order[] memory result = new Order[](indexes.length);
+
+        for (uint i = 0; i < indexes.length; i++) {
+            result[i] = orders[indexes[i]];
+        }
+
+        return result;
     }
 
     function markDelivered(uint _orderIndex) public onlyOwner {
         require(_orderIndex < orders.length, "Order not found");
+        require(!orders[_orderIndex].delivered, "Already delivered"); 
+
         orders[_orderIndex].delivered = true;
         emit Delivered(_orderIndex);
     }
@@ -101,7 +118,10 @@ contract BirthdayCakeShopSapphire {
     function withdraw() public onlyOwner {
         uint balance = address(this).balance;
         require(balance > 0, "No balance");
-        payable(owner).transfer(balance);
+
+        (bool success, ) = payable(owner).call{value: balance}("");
+        require(success, "Withdraw failed");
+
         emit Withdraw(owner, balance);
     }
 }

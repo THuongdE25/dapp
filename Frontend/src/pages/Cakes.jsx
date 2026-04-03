@@ -12,8 +12,9 @@
 
     useEffect(() => {
       const loadData = async () => {
+        setLoading(true);
         const contract = await getContractReadOnly();
-
+        
         const filtered = ProductCatalog.filter((cake) =>
           category ? cake.slug.startsWith(category) : true
         );
@@ -25,9 +26,7 @@
 
               return {
                 ...cake,
-                price: Number(
-                  ethers.formatEther(onChain.price)
-                ).toFixed(3),
+               price: ethers.formatEther(onChain.price),
                 isAvailable: onChain.isAvailable,
               };
             } catch {
