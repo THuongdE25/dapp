@@ -148,13 +148,13 @@ function Navbar({ account, setAccount, isAdmin }) {
                   </Link>
                 </li>
 
-                {displayWallet && !isAdmin && (
+                {
                   <li className="nav-item me-3">
                     <Link className="nav-link text-white" to="/orders">
                       Đơn hàng
                     </Link>
                   </li>
-                )}
+                }
 
 {isAdmin && (
   <li className="nav-item dropdown me-3">

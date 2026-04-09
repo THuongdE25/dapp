@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 
-const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const contractAddress = "0xA68C9370A01c9BEC7F673f110a1484587dfe4919";
 
 const abi = [
     {
@@ -418,6 +418,8 @@ export const getContractWithSigner = async () => {
   }
 
   const provider = new ethers.BrowserProvider(window.ethereum);
+  const network = await provider.getNetwork();
+console.log("MetaMask network:", network);
 
   await provider.send("eth_requestAccounts", []);
 

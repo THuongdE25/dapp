@@ -10,7 +10,11 @@ function OrderHistory({ account }) {
   const [loading, setLoading] = useState(true);
 
   const loadOrders = async () => {
-    if (!account) return;
+    if (!account) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -32,28 +36,30 @@ function OrderHistory({ account }) {
       });
 
       setOrders(formatted);
-      setLoading(false);
     } catch (err) {
       console.error(err);
+      setOrders([]);
+    } finally {
       setLoading(false);
     }
   };
 
   // ✅ Load orders lần đầu & lắng nghe event realtime
-  useEffect(() => {
-    loadOrders();
+useEffect(() => {
+  if (!account) return;
 
-    const handler = () => loadOrders();
-    window.addEventListener("orderUpdated", handler);
+  loadOrders();
 
-    return () => window.removeEventListener("orderUpdated", handler);
-  }, [account]);
+  const handler = () => loadOrders();
+  window.addEventListener("orderUpdated", handler);
 
-  // Reload khi navigate với state.refresh
-  useEffect(() => {
-    loadOrders();
-  }, [location.state?.refresh]);
+  return () => {
+    window.removeEventListener("orderUpdated", handler);
+  };
+}, [account, location.state?.refresh]);
 
+
+  if (!account) return <h4 className="text-center mt-5">Vui lòng kết nối ví</h4>;
   if (loading) return <h3 className="text-center mt-5">Loading...</h3>;
   if (orders.length === 0) return <h4 className="text-center mt-5">Chưa có đơn hàng nào</h4>;
 

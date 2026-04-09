@@ -132,19 +132,22 @@ function App() {
         <Route path="/cart" element={<Cart account={account} />} />
         <Route path="/login" element={<Login />} />
         <Route path="/product/:id" element={<ProductDetail account={account} />} />
-        <Route path="/admin/products" element={<AdminProducts />} />
-        <Route path="/admin/orders" element={<AdminOrders />} />
-        
+
+
         {/* User */}
         <Route
           path="/orders"
-          element={account && !isAdmin ? <OrderHistory /> : <Home />}
+          element={<OrderHistory account={account} />}
         />
 
         {/* Admin */}
         <Route
-          path="/admin"
+          path="/admin/orders"
           element={isAdmin ? <AdminOrders /> : <Home />}
+        />
+        <Route
+          path="/admin/products"
+          element={isAdmin ? <AdminProducts /> : <Home />}
         />
       </Routes>
 

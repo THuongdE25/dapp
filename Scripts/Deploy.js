@@ -1,16 +1,16 @@
 const hre = require("hardhat");
 
 async function main() {
-    const CakeShop = await hre.ethers.getContractFactory("BirthdayCakeShopSapphire");
+  const CakeShop = await hre.ethers.getContractFactory("BirthdayCakeShopSapphire");
+  const cakeShop = await CakeShop.deploy();
 
-    const contract = await CakeShop.deploy();
+  await cakeShop.waitForDeployment();
 
-    await contract.waitForDeployment();
-
-    console.log("Contract deployed to:", await contract.getAddress());
+  const address = await cakeShop.getAddress();
+  console.log("Contract deployed to:", address);
 }
 
 main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
+  console.error(error);
+  process.exitCode = 1;
 });
