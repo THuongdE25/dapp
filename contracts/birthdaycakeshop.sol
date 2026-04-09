@@ -1,14 +1,12 @@
 pragma solidity ^0.8.20;
 
 contract BirthdayCakeShopSapphire {
-
     address public owner;
-    uint public nextCakeId = 1;
 
     struct Cake {
         uint id;
         string name;
-        uint price; 
+        uint price; // giá tính theo rose
         bool isAvailable;
     }
 
@@ -18,14 +16,14 @@ contract BirthdayCakeShopSapphire {
         uint quantity;
         uint totalPrice;
         uint timestamp;
-        bool delivered; 
+        bool delivered;
     }
 
     mapping(uint => Cake) public cakes;
     mapping(address => uint[]) private userOrderIndexes;
     Order[] public orders;
 
-    event CakeAdded(uint cakeId, string name, uint price);
+    event CakeUpserted(uint cakeId, string name, uint price, bool isAvailable);
     event CakeOrdered(address indexed buyer, uint cakeId, uint quantity, uint totalPrice);
     event Withdraw(address indexed owner, uint amount);
     event Delivered(uint orderId);
@@ -37,19 +35,27 @@ contract BirthdayCakeShopSapphire {
 
     constructor() {
         owner = msg.sender;
-
-        addCake("MANGO CAKE", 0.01 ether);
-        addCake("CAPPUCCINO CAKE", 0.02 ether);
-        addCake("DREAM CAKE", 0.015 ether);
-        addCake("STRAWBERRY CAKE", 0.018 ether);
-        addCake("STRAWBERRY WHITE CAKE", 0.02 ether);
     }
 
-    function addCake(string memory _name, uint _price) public onlyOwner {
+    // Them moi hoac cap nhat banh theo id tu SQL
+    function upsertCake(
+        uint _id,
+        string memory _name,
+        uint _price,
+        bool _isAvailable
+    ) public onlyOwner {
+        require(_id > 0, "Invalid cake id");
+        require(bytes(_name).length > 0, "Name is required");
         require(_price > 0, "Price must be > 0");
-        cakes[nextCakeId] = Cake(nextCakeId, _name, _price, true);
-        emit CakeAdded(nextCakeId, _name, _price);
-        nextCakeId++;
+
+        cakes[_id] = Cake({
+            id: _id,
+            name: _name,
+            price: _price,
+            isAvailable: _isAvailable
+        });
+
+        emit CakeUpserted(_id, _name, _price, _isAvailable);
     }
 
     function setAvailability(uint _id, bool _status) public onlyOwner {
@@ -57,15 +63,29 @@ contract BirthdayCakeShopSapphire {
         cakes[_id].isAvailable = _status;
     }
 
+    function updateCakePrice(uint _id, uint _newPrice) public onlyOwner {
+        require(cakes[_id].id != 0, "Cake not found");
+        require(_newPrice > 0, "Price must be > 0");
+
+        cakes[_id].price = _newPrice;
+
+        emit CakeUpserted(
+            cakes[_id].id,
+            cakes[_id].name,
+            cakes[_id].price,
+            cakes[_id].isAvailable
+        );
+    }
+
     function getCake(uint _id) public view returns (Cake memory) {
-        require(cakes[_id].id != 0, "Cake not found"); 
+        require(cakes[_id].id != 0, "Cake not found");
         return cakes[_id];
     }
 
     function orderCake(uint _cakeId, uint _quantity) public payable {
         require(_quantity > 0, "Invalid quantity");
 
-        Cake storage cake = cakes[_cakeId]; 
+        Cake storage cake = cakes[_cakeId];
         require(cake.id != 0, "Cake not found");
         require(cake.isAvailable, "Cake not available");
 
@@ -109,7 +129,7 @@ contract BirthdayCakeShopSapphire {
 
     function markDelivered(uint _orderIndex) public onlyOwner {
         require(_orderIndex < orders.length, "Order not found");
-        require(!orders[_orderIndex].delivered, "Already delivered"); 
+        require(!orders[_orderIndex].delivered, "Already delivered");
 
         orders[_orderIndex].delivered = true;
         emit Delivered(_orderIndex);

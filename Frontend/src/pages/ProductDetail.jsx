@@ -1,71 +1,90 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect, useContext } from "react";
 import { CartContext } from "./CartContext";
-import ProductCatalog from "../data/ProductsCatalog";
-import { getContractReadOnly, getContractWithSigner } from "../contract/contract";
+import { getContractWithSigner } from "../contract/contract";
 import { ethers } from "ethers";
 
 function ProductDetail() {
-  const { slug } = useParams();
+  const { id } = useParams();
 
-  const product = ProductCatalog.find((item) => item.slug === slug);
-
+  const [product, setProduct] = useState(null);
   const [size, setSize] = useState("19cm");
   const [quantity, setQuantity] = useState(1);
-  const [price, setPrice] = useState(0); 
-  const [isAvailable, setIsAvailable] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   const { addToCart } = useContext(CartContext);
 
   useEffect(() => {
-    const loadBlockchainData = async () => {
-      const contract = getContractReadOnly();
-
+    const fetchProduct = async () => {
       try {
-        const onChain = await contract.getCake(product.id);
+        setLoading(true);
 
-        setPrice(Number(ethers.formatEther(onChain.price)));
-        setIsAvailable(onChain.isAvailable);
+        const res = await fetch(`http://localhost:3000/api/cakes/${id}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || "Không tìm thấy sản phẩm");
+        }
+
+        setProduct(data);
       } catch (err) {
-        console.error(err);
+        console.error("Lỗi fetch product:", err);
+        setProduct(null);
+      } finally {
+        setLoading(false);
       }
     };
 
-    if (product) loadBlockchainData();
-  }, [product]);
-
-  if (!product) return <h2>Không tìm thấy sản phẩm</h2>;
+    fetchProduct();
+  }, [id]);
 
   const handleAddToCart = () => {
+    if (!product) return;
+
     addToCart({
       id: product.id,
       name: product.name,
-      img: product.img,
-      price: price, 
-      quantity: quantity,
+      img: product.image_url || product.img,
+      price: Number(product.price) || 0,
+      quantity,
       checked: true,
     });
   };
 
   const handleBuyNow = async () => {
     try {
+      if (!product) return;
+
+      const blockchainId = product.blockchain_id;
+
+      if (!blockchainId) {
+        alert("Sản phẩm này chưa được đồng bộ lên blockchain");
+        return;
+      }
+
       const contract = await getContractWithSigner();
 
-      const total = price * quantity;
+      const unitPrice = Number(product.blockchain_price);
+      if (!unitPrice || unitPrice <= 0) {
+        alert("Thiếu giá blockchain của sản phẩm");
+        return;
+      }
+
+      const total = unitPrice * quantity;
       const value = ethers.parseEther(total.toString());
 
-      const tx = await contract.orderCake(product.id, quantity, {
-        value,
-      });
-
+      const tx = await contract.orderCake(blockchainId, quantity, { value });
       await tx.wait();
 
-      alert("Mua thành công ");
+      alert("Mua thành công");
     } catch (err) {
-      console.error(err);
-      alert("Lỗi khi mua ");
+      console.error("Lỗi khi mua:", err);
+      alert("Lỗi khi mua bằng MetaMask");
     }
   };
+
+  if (loading) return <h2>Đang tải sản phẩm...</h2>;
+  if (!product) return <h2>Không tìm thấy sản phẩm</h2>;
 
   return (
     <div className="container mt-5">
@@ -73,26 +92,25 @@ function ProductDetail() {
         <div className="row">
           <div className="col-md-6">
             <img
-              src={product.img}
+              src={product.image_url || product.img}
               className="img-fluid"
               alt={product.name}
+              style={{
+                width: "100%",
+                maxHeight: "450px",
+                objectFit: "cover",
+                borderRadius: "12px",
+              }}
             />
           </div>
 
           <div className="col-md-6">
             <h2>{product.name}</h2>
-
-            <h4>{price} ROSE</h4>
-
-            {!isAvailable && (
-              <p style={{ color: "red" }}>Hết hàng</p>
-            )}
+            <h4>{Number(product.price) || 0} ROSE</h4>
 
             <div className="mt-3">
               <h5>Kích thước</h5>
-              <button onClick={() => setSize("19cm")}>
-                19 cm
-              </button>
+              <button onClick={() => setSize("19cm")}>19 cm</button>
             </div>
 
             <div className="mt-3">
@@ -101,25 +119,15 @@ function ProductDetail() {
                 -
               </button>
               <span className="mx-2">{quantity}</span>
-              <button onClick={() => setQuantity(quantity + 1)}>
-                +
-              </button>
+              <button onClick={() => setQuantity(quantity + 1)}>+</button>
             </div>
 
             <div className="mt-4">
-              <button
-                className="btn-cart me-2"
-                onClick={handleAddToCart}
-                disabled={!isAvailable}
-              >
+              <button className="btn-cart me-2" onClick={handleAddToCart}>
                 Thêm vào giỏ
               </button>
 
-              <button
-                className="btn-cart"
-                onClick={handleBuyNow}
-                disabled={!isAvailable}
-              >
+              <button className="btn-cart" onClick={handleBuyNow}>
                 Mua ngay (MetaMask)
               </button>
             </div>

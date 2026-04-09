@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 
-const contractAddress = "0x9f27D3ad335DDaadcb470317ABDF2364b77819e4";
+const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
 const abi = [
     {

@@ -1,89 +1,73 @@
-  import { useEffect, useState } from "react";
-  import { getContractReadOnly } from "../contract/contract";
-  import ProductCatalog from "../data/ProductsCatalog";
-  import { ethers } from "ethers";
-  import { useParams, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
 
-  function Cakes() {
-    const { category } = useParams();
+function Cakes() {
+  const { category } = useParams();
 
-    const [cakes, setCakes] = useState([]);
-    const [loading, setLoading] = useState(true);
+  const [cakes, setCakes] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-      const loadData = async () => {
+  useEffect(() => {
+    const loadData = async () => {
+      try {
         setLoading(true);
-        const contract = await getContractReadOnly();
-        
-        const filtered = ProductCatalog.filter((cake) =>
-          category ? cake.slug.startsWith(category) : true
-        );
 
-        const final = await Promise.all(
-          filtered.map(async (cake) => {
-            try {
-              const onChain = await contract.getCake(cake.id);
+        let url = "http://localhost:3000/api/cakes";
 
-              return {
-                ...cake,
-               price: ethers.formatEther(onChain.price),
-                isAvailable: onChain.isAvailable,
-              };
-            } catch {
-              return {
-                ...cake,
-                price: "0",
-                isAvailable: false,
-              };
-            }
-          })
-        );
+        if (category) {
+          url += `?category=${encodeURIComponent(category)}`;
+        }
 
-        setCakes(final);
+        console.log("Đang gọi API:", url);
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        setCakes(data);
+      } catch (err) {
+        console.error("Lỗi load cakes:", err);
+      } finally {
         setLoading(false);
-      };
+      }
+    };
 
-      loadData();
-    }, [category]);
+    loadData();
+  }, [category]);
 
-    if (loading) return <h3>Loading ...</h3>;
+  if (loading) return <h3>Loading...</h3>;
 
-    return (
-      <div className="container mt-4">
-        <div className="row">
-          {cakes.map((cake) => (
-            <div key={cake.id} className="col-md-3 mb-3">
-              <div className="card h-100 text-center p-2">
+  return (
+    <div className="container mt-4">
+      <div className="row">
+        {cakes.map((cake) => (
+          <div key={cake.id} className="col-md-3 mb-3">
+            <div className="card h-100 text-center p-2">
+              <img
+                src={cake.image_url}
+                alt={cake.name}
+                className="img-fluid"
+              />
 
-                <img
-                  src={cake.img}
-                  alt={cake.name}
-                  className="img-fluid"
-                />
+              <h5 className="mt-2">{cake.name}</h5>
 
-                <h5 className="mt-2">{cake.name}</h5>
+              <p>{cake.price} ROSE</p>
 
-                <p>{cake.price} ROSE</p>
+              {(cake.quantity ?? 0) > 0 ? (
+               <span style={{ color: "green" }}>Còn hàng</span>
+               ) : (
+               <span style={{ color: "red" }}>Hết hàng</span>
+               )}
 
-                {!cake.isAvailable && (
-                  <span style={{ color: "red" }}>
-                    Hết hàng
-                  </span>
-                )}
-
-                <Link
-                  to={`/product/${cake.slug}`}
-                  className="btn-cart mt-2"
-                >
-                  Xem chi tiết
-                </Link>
-
-              </div>
+ <Link to={`/product/${cake.id}`}                 className="btn-cart mt-2"
+>
+  Xem chi tiết
+</Link>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  export default Cakes;
+export default Cakes;

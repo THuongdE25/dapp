@@ -1,41 +1,86 @@
 import { Link } from "react-router-dom";
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { CartContext } from "../pages/CartContext";
 
 function Navbar({ account, setAccount, isAdmin }) {
   const { cart } = useContext(CartContext);
+  const [user, setUser] = useState(null);
 
-  //  connect wallet
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
   const connectWallet = async () => {
     if (!window.ethereum) {
       alert("Vui lòng cài MetaMask!");
       return;
     }
 
-    const accounts = await window.ethereum.request({
-      method: "eth_requestAccounts",
-    });
+    try {
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
 
-    setAccount(accounts[0]);
+      setAccount(accounts[0]);
+
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) {
+        const newUser = {
+          wallet_address: accounts[0],
+        };
+        localStorage.setItem("user", JSON.stringify(newUser));
+        setUser(newUser);
+      }
+    } catch (error) {
+      console.error("Lỗi kết nối ví:", error);
+    }
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+    if (setAccount) {
+      setAccount("");
+    }
+  };
+
+  const displayWallet =
+    account || (user && user.wallet_address) || "";
 
   return (
     <>
       <div className="color">
         <div className="border-bottom">
           <div className="container py-3 d-flex justify-content-between align-items-center">
-            <h2 className="m-0 fw-bold text-white"> Cake Shop</h2>
+            <h2 className="m-0 fw-bold text-white">Cake Shop</h2>
 
-            {/* Wallet */}
-            {account ? (
-              <span className="text-white">
-                {account.slice(0, 6)}...{account.slice(-4)}
-              </span>
-            ) : (
-              <button className="btn btn-light" onClick={connectWallet}>
-                Connect Wallet
-              </button>
-            )}
+            <div className="d-flex align-items-center gap-2">
+              {displayWallet ? (
+                <>
+                  <span className="text-white">
+                    {displayWallet.slice(0, 6)}...{displayWallet.slice(-4)}
+                  </span>
+                  <button
+                    className="btn btn-sm btn-light"
+                    onClick={handleLogout}
+                  >
+                    Đăng xuất
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link className="btn btn-light btn-sm" to="/login">
+                    Đăng nhập
+                  </Link>
+                  <button className="btn btn-light btn-sm" onClick={connectWallet}>
+                    Connect Wallet
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -103,8 +148,7 @@ function Navbar({ account, setAccount, isAdmin }) {
                   </Link>
                 </li>
 
-                {/* 🟢 User Orders */}
-                {account && !isAdmin && (
+                {displayWallet && !isAdmin && (
                   <li className="nav-item me-3">
                     <Link className="nav-link text-white" to="/orders">
                       Đơn hàng
@@ -112,23 +156,33 @@ function Navbar({ account, setAccount, isAdmin }) {
                   </li>
                 )}
 
-                {isAdmin && (
-                  <li className="nav-item me-3">
-                    <Link className="nav-link text-white" to="/admin">
-                      Quản lý đơn
-                    </Link>
-                  </li>
-                )}
+{isAdmin && (
+  <li className="nav-item dropdown me-3">
+    <span className="nav-link dropdown-toggle text-white" data-bs-toggle="dropdown">
+      Quản lý
+    </span>
+
+    <ul className="dropdown-menu">
+      <li>
+        <Link className="dropdown-item" to="/admin/orders">
+          Quản lý đơn
+        </Link>
+      </li>
+      <li>
+        <Link className="dropdown-item" to="/admin/products">
+          Quản lý sản phẩm
+        </Link>
+      </li>
+    </ul>
+  </li>
+)}
               </ul>
 
-              {/* Right side */}
               <ul className="navbar-nav ms-auto">
                 <li className="nav-item me-3">
                   <Link className="nav-link text-white" to="/cart">
-                     Giỏ hàng
-                    <span className="badge bg-danger ms-1">
-                      {cart.length}
-                    </span>
+                    Giỏ hàng
+                    <span className="badge bg-danger ms-1">{cart.length}</span>
                   </Link>
                 </li>
               </ul>

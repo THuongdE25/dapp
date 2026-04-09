@@ -1,12 +1,12 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useState, useEffect } from "react";
-
+import AdminProducts from "./pages/AdminProducts";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-
 import Cakes from "./pages/Cakes";
 import News from "./pages/News";
 import Cart from "./pages/Cart";
+import Login from "./pages/Login";
 import Home from "./pages/Home";
 import ProductDetail from "./pages/ProductDetail";
 import AdminOrders from "./pages/AdminOrders";
@@ -18,10 +18,12 @@ function App() {
   const [account, setAccount] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Check wallet khi load
+  // Kiểm tra ví khi load app
   useEffect(() => {
     const checkWallet = async () => {
-      if (window.ethereum) {
+      if (!window.ethereum) return;
+
+      try {
         const accounts = await window.ethereum.request({
           method: "eth_accounts",
         });
@@ -29,13 +31,15 @@ function App() {
         if (accounts.length > 0) {
           setAccount(accounts[0]);
         }
+      } catch (err) {
+        console.error("Check wallet error:", err);
       }
     };
 
     checkWallet();
   }, []);
 
-  //đổi account
+  // Theo dõi khi user đổi account trên MetaMask
   useEffect(() => {
     if (!window.ethereum) return;
 
@@ -45,43 +49,51 @@ function App() {
 
     window.ethereum.on("accountsChanged", handleAccountsChanged);
 
-    // cleanup
     return () => {
-      window.ethereum.removeListener(
-        "accountsChanged",
-        handleAccountsChanged
-      );
+      window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
     };
   }, []);
+
+  // Lắng nghe event từ smart contract
   useEffect(() => {
-  const setupListeners = async () => {
+    if (!account) return;
+
     const contract = getContractReadOnly();
 
-    contract.on("CakeOrdered", (buyer, cakeId, qty, total) => {
+    const handleCakeOrdered = (buyer, cakeId, qty, total) => {
       console.log("New order:", buyer, cakeId, qty, total);
-      // Nếu user hiện tại là buyer → reload OrderHistory
+
       if (buyer.toLowerCase() === account.toLowerCase()) {
         window.dispatchEvent(new Event("orderUpdated"));
       }
-      // Admin sẽ luôn reload AdminOrders
-      window.dispatchEvent(new Event("adminOrderUpdated"));
-    });
 
-    contract.on("Delivered", (orderId) => {
+      window.dispatchEvent(new Event("adminOrderUpdated"));
+    };
+
+    const handleDelivered = (orderId) => {
+      console.log("Delivered:", orderId);
       window.dispatchEvent(new Event("orderUpdated"));
       window.dispatchEvent(new Event("adminOrderUpdated"));
-    });
-  };
+    };
 
-  if (account) setupListeners();
+    try {
+      contract.on("CakeOrdered", handleCakeOrdered);
+      contract.on("Delivered", handleDelivered);
+    } catch (err) {
+      console.error("Listen contract events error:", err);
+    }
 
-  return () => {
-    const contract = getContractReadOnly();
-    contract.removeAllListeners("CakeOrdered");
-    contract.removeAllListeners("Delivered");
-  };
-}, [account]);
-  // Check admin từ smart contract
+    return () => {
+      try {
+        contract.off("CakeOrdered", handleCakeOrdered);
+        contract.off("Delivered", handleDelivered);
+      } catch (err) {
+        console.error("Remove contract listeners error:", err);
+      }
+    };
+  }, [account]);
+
+  // Kiểm tra admin từ smart contract
   useEffect(() => {
     const checkAdmin = async () => {
       if (!account) {
@@ -93,9 +105,7 @@ function App() {
         const contract = getContractReadOnly();
         const owner = await contract.owner();
 
-        setIsAdmin(
-          owner.toLowerCase() === account.toLowerCase()
-        );
+        setIsAdmin(owner.toLowerCase() === account.toLowerCase());
       } catch (err) {
         console.error("Check admin error:", err);
         setIsAdmin(false);
@@ -114,39 +124,29 @@ function App() {
       />
 
       <Routes>
-  {/* Public */}
-  <Route path="/" element={<Home />} />
-  <Route path="/cakes" element={<Cakes account={account} />} />
-  <Route path="/cakes/:category" element={<Cakes account={account} />} />
-  <Route path="/news" element={<News />} />
-  <Route path="/cart" element={<Cart account={account} />} />
-  <Route path="/product/:slug" element={<ProductDetail account={account} />} />
+        {/* Public */}
+        <Route path="/" element={<Home />} />
+        <Route path="/cakes" element={<Cakes account={account} />} />
+        <Route path="/cakes/:category" element={<Cakes account={account} />} />
+        <Route path="/news" element={<News />} />
+        <Route path="/cart" element={<Cart account={account} />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/product/:id" element={<ProductDetail account={account} />} />
+        <Route path="/admin/products" element={<AdminProducts />} />
+        <Route path="/admin/orders" element={<AdminOrders />} />
+        
+        {/* User */}
+        <Route
+          path="/orders"
+          element={account && !isAdmin ? <OrderHistory /> : <Home />}
+        />
 
-  {/* 👤 USER - chỉ khi có ví và KHÔNG phải admin */}
-  <Route
-    path="/orders"
-    element={
-      account && !isAdmin ? (
-        <OrderHistory />
-      ) : (
-        <Home />
-      )
-    }
-  />
-
-  {/* 👑 ADMIN - chỉ owner */}
-  <Route
-    path="/admin"
-    element={
-      isAdmin ? (
-        <AdminOrders />
-      ) : (
-        <Home />
-      )
-    }
-  />
-</Routes>
-
+        {/* Admin */}
+        <Route
+          path="/admin"
+          element={isAdmin ? <AdminOrders /> : <Home />}
+        />
+      </Routes>
 
       <Footer />
     </BrowserRouter>
