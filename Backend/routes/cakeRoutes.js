@@ -2,6 +2,9 @@ const express = require("express");
 const router = express.Router();
 const cakeController = require("../controllers/cakeController");
 
+// 🔥 Admin: Sync tất cả cakes lên blockchain (PHẢI ĐẶT TRƯỚC)
+router.post("/admin/sync-blockchain", cakeController.syncCakesToBlockchain);
+
 router.get("/", cakeController.getCakes);
 router.get("/:id", cakeController.getCakeById);
 

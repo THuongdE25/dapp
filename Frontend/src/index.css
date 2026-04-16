@@ -118,3 +118,10 @@ body {
   font-size: 17px;
   text-decoration: none;
 }
+.sold-text {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #666;
+  text-align: right;
+  padding-right: 8px;
+}
