@@ -43,17 +43,27 @@ exports.createOrder = async (req, res) => {
     userRequest.input("wallet_address", sql.NVarChar, wallet_address);
 
     const userResult = await userRequest.query(`
-      SELECT TOP 1 id
-      FROM users
-      WHERE wallet_address = @wallet_address
-    `);
+  SELECT TOP 1 id
+  FROM users
+  WHERE wallet_address = @wallet_address
+  `);
+
+    let user_id;
 
     if (userResult.recordset.length === 0) {
-      await transaction.rollback();
-      return res.status(404).json({ message: "Không tìm thấy user theo wallet_address" });
-    }
+      const insertUserRequest = new sql.Request(transaction);
+      insertUserRequest.input("wallet_address", sql.NVarChar, wallet_address);
 
-    const user_id = userResult.recordset[0].id;
+      const insertUserResult = await insertUserRequest.query(`
+    INSERT INTO users (wallet_address)
+    OUTPUT INSERTED.id
+    VALUES (@wallet_address)
+  `);
+
+      user_id = insertUserResult.recordset[0].id;
+    } else {
+      user_id = userResult.recordset[0].id;
+    }
 
     for (const item of items) {
       const stockRequest = new sql.Request(transaction);
