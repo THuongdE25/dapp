@@ -2,7 +2,7 @@ const { ethers } = require("ethers");
 
 const RPC_URL = process.env.RPC_URL || "https://testnet.sapphire.oasis.dev";
 const CONTRACT_ADDRESS =
-  process.env.CONTRACT_ADDRESS || "0xDBb3bBE429De1fcF10A8f872D1135Ea6f3baA412";
+  process.env.CONTRACT_ADDRESS || "0xC41A5DF9AB948686e29730664D3Bdc068a4AcA0a";
 
 const ABI = [
   "function owner() view returns (address)",
@@ -26,8 +26,7 @@ function getContractWithPrivateKey() {
     throw new Error("OWNER_PRIVATE_KEY is missing in environment");
   }
 
-  const normalizedKey = key.startsWith("0x") ? key : `0x${key}`;
-  const wallet = new ethers.Wallet(normalizedKey, getProvider());
+  const wallet = new ethers.Wallet(key, getProvider());
   return new ethers.Contract(CONTRACT_ADDRESS, ABI, wallet);
 }
 

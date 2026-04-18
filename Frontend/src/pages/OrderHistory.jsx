@@ -101,6 +101,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { getContractWithSigner } from "../contract/contract";
 
 function OrderHistory({ account }) {
   const location = useLocation();
@@ -130,6 +131,7 @@ function OrderHistory({ account }) {
       const formatted = data.map((o, i) => ({
         id: `${o.order_id}-${o.cake_id}-${i}`,
         order_id: o.order_id,
+        blockchain_order_index: o.blockchain_order_index,
         cakeId: Number(o.cake_id),
         name: o.name || "Unknown Cake",
         img: o.image_url || o.img || "",
@@ -139,6 +141,7 @@ function OrderHistory({ account }) {
         shipping_status: o.shipping_status || "pending",
       }));
 
+      console.log("USER ORDERS DATA:", formatted);
       setOrders(formatted);
     } catch (err) {
       console.error("Lỗi load orders:", err);
@@ -191,40 +194,55 @@ function OrderHistory({ account }) {
     }
   };
 
-  const handleReceivedOrder = async (orderId) => {
+  const handleReceivedOrder = async (orderId, blockchainOrderIndex) => {
     try {
       setConfirmingOrderId(orderId);
 
-      const res = await fetch(`http://localhost:3000/api/orders/${orderId}/shipping-status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ shipping_status: "delivered" }),
-      });
+      console.log("RECEIVE CLICK:", { orderId, blockchainOrderIndex });
+
+      if (blockchainOrderIndex == null) {
+        throw new Error("Thiếu blockchain_order_index");
+      }
+
+      const contract = await getContractWithSigner();
+
+      const tx = await contract.confirmReceived(blockchainOrderIndex);
+      await tx.wait();
+
+      const res = await fetch(
+        `http://localhost:3000/api/orders/${orderId}/confirm-received`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.message || "Cập nhật thất bại");
-        return;
+        throw new Error(data.message || "Cập nhật DB thất bại");
       }
-
-      alert("Cảm ơn bạn đã xác nhận đã nhận được hàng");
 
       setOrders((prev) =>
         prev.map((item) =>
           item.order_id === orderId
-            ? {
-                ...item,
-                shipping_status: "delivered",
-              }
+            ? { ...item, shipping_status: "delivered" }
             : item
         )
       );
+
+      alert("Cảm ơn bạn đã xác nhận đã nhận được hàng");
     } catch (err) {
       console.error("handleReceivedOrder error:", err);
-      alert(err?.message || "Xác nhận nhận hàng thất bại");
+      alert(
+        err?.response?.data?.message ||
+          err?.reason ||
+          err?.shortMessage ||
+          err?.message ||
+          "Xác nhận nhận hàng thất bại"
+      );
     } finally {
       setConfirmingOrderId(null);
     }
@@ -237,6 +255,7 @@ function OrderHistory({ account }) {
   return (
     <div className="container py-5">
       <h2 className="mb-4">📦 Lịch sử đơn hàng</h2>
+
       {orders.map((o) => (
         <div key={o.id} className="card1 mb-4 shadow-sm">
           <div className="card1-body">
@@ -263,6 +282,9 @@ function OrderHistory({ account }) {
               <div className="ms-3 flex-grow-1">
                 <h6 className="mb-2">{o.name}</h6>
                 <small className="text-muted">Số lượng: {o.quantity}</small>
+                <div className="text-muted small">
+                  blockchain_order_index: {String(o.blockchain_order_index)}
+                </div>
               </div>
               <div className="fw-bold price">{o.total.toFixed(3)} ROSE</div>
             </div>
@@ -281,7 +303,9 @@ function OrderHistory({ account }) {
                 <button
                   className="btn btn-success"
                   disabled={confirmingOrderId === o.order_id}
-                  onClick={() => handleReceivedOrder(o.order_id)}
+                  onClick={() =>
+                    handleReceivedOrder(o.order_id, o.blockchain_order_index)
+                  }
                 >
                   {confirmingOrderId === o.order_id
                     ? "Đang xác nhận..."

@@ -1,15 +1,31 @@
 const { ethers } = require("hardhat");
 
 async function main() {
-  const contractAddress = "0xDBb3bBE429De1fcF10A8f872D1135Ea6f3baA412";
+  const contractAddress = "0xC41A5DF9AB948686e29730664D3Bdc068a4AcA0a";
+
+  const [signer] = await ethers.getSigners();
+
+  console.log("Current signer:", signer.address);
 
   const contract = await ethers.getContractAt(
     "BirthdayCakeShopSapphire",
-    contractAddress
+    contractAddress,
+    signer
   );
 
   const owner = await contract.owner();
   console.log("Contract owner:", owner);
+
+  const balance = await ethers.provider.getBalance(contractAddress);
+  console.log("Contract balance:", ethers.formatEther(balance), "ROSE");
+
+  if (signer.address.toLowerCase() !== owner.toLowerCase()) {
+    throw new Error("Signer hiện tại không phải owner của contract");
+  }
+
+  if (balance === 0n) {
+    throw new Error("Contract không có tiền để rút");
+  }
 
   const tx = await contract.withdraw();
   console.log("Sending withdraw tx:", tx.hash);

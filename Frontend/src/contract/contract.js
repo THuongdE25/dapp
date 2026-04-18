@@ -2,7 +2,7 @@ import { ethers } from "ethers";
 
 const contractAddress =
   import.meta.env.VITE_CONTRACT_ADDRESS ||
-  "0xDBb3bBE429De1fcF10A8f872D1135Ea6f3baA412";
+  "0xC41A5DF9AB948686e29730664D3Bdc068a4AcA0a";
 
 const abi = [
   {
@@ -150,6 +150,19 @@ const abi = [
         "internalType": "struct BirthdayCakeShopSapphire.Order[]",
         "name": "",
         "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getMyOrderIndexes",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
       }
     ],
     "stateMutability": "view",

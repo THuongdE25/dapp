@@ -12,7 +12,8 @@ exports.createOrder = async (req, res) => {
       shipping_name,
       shipping_phone,
       shipping_address,
-      note
+      note,
+      blockchain_order_index
     } = req.body;
 
     if (!wallet_address) {
@@ -23,7 +24,10 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ message: "Thiếu danh sách items" });
     }
 
-    // Validate items trước
+    if (blockchain_order_index == null) {
+      return res.status(400).json({ message: "Thiếu blockchain_order_index" });
+    }
+
     for (const item of items) {
       if (!item.cake_id || !item.quantity || item.quantity <= 0) {
         return res.status(400).json({
@@ -35,7 +39,6 @@ exports.createOrder = async (req, res) => {
     transaction = new sql.Transaction();
     await transaction.begin();
 
-    // 1) Tìm user
     const userRequest = new sql.Request(transaction);
     userRequest.input("wallet_address", sql.NVarChar, wallet_address);
 
@@ -52,7 +55,6 @@ exports.createOrder = async (req, res) => {
 
     const user_id = userResult.recordset[0].id;
 
-    // 2) Kiểm tra tồn kho tất cả item trước khi tạo order
     for (const item of items) {
       const stockRequest = new sql.Request(transaction);
       stockRequest.input("cake_id", sql.Int, item.cake_id);
@@ -82,7 +84,6 @@ exports.createOrder = async (req, res) => {
       }
     }
 
-    // 3) Tạo order
     const orderRequest = new sql.Request(transaction);
     orderRequest.input("user_id", sql.Int, user_id);
     orderRequest.input("total_price", sql.Decimal(18, 2), total_price || 0);
@@ -94,6 +95,7 @@ exports.createOrder = async (req, res) => {
     orderRequest.input("note", sql.NVarChar, note || null);
     orderRequest.input("payment_status", sql.NVarChar, "paid");
     orderRequest.input("shipping_status", sql.NVarChar, "pending");
+    orderRequest.input("blockchain_order_index", sql.Int, Number(blockchain_order_index));
 
     const orderResult = await orderRequest.query(`
       INSERT INTO orders (
@@ -107,9 +109,10 @@ exports.createOrder = async (req, res) => {
         shipping_address,
         note,
         payment_status,
-        shipping_status
+        shipping_status,
+        blockchain_order_index
       )
-      OUTPUT INSERTED.id
+      OUTPUT INSERTED.id, INSERTED.blockchain_order_index
       VALUES (
         @user_id,
         @total_price,
@@ -121,13 +124,13 @@ exports.createOrder = async (req, res) => {
         @shipping_address,
         @note,
         @payment_status,
-        @shipping_status
+        @shipping_status,
+        @blockchain_order_index
       )
     `);
 
     const orderId = orderResult.recordset[0].id;
 
-    // 4) Insert order_items + trừ tồn kho
     for (const item of items) {
       const itemRequest = new sql.Request(transaction);
       itemRequest.input("order_id", sql.Int, orderId);
@@ -165,13 +168,14 @@ exports.createOrder = async (req, res) => {
     res.json({
       success: true,
       message: "Tạo đơn hàng thành công",
-      order_id: orderId
+      order_id: orderId,
+      blockchain_order_index: orderResult.recordset[0].blockchain_order_index
     });
   } catch (err) {
     if (transaction) {
       try {
         await transaction.rollback();
-      } catch (_) {}
+      } catch (_) { }
     }
 
     console.error("Lỗi createOrder:", err);
@@ -193,6 +197,7 @@ exports.getMyOrders = async (req, res) => {
     const result = await request.query(`
       SELECT
         o.id AS order_id,
+        o.blockchain_order_index,
         o.total_price,
         o.status,
         o.transaction_hash,
@@ -228,31 +233,31 @@ exports.getAllOrders = async (req, res) => {
     const request = new sql.Request();
 
     const result = await request.query(`
-      SELECT
-        o.id AS order_id,
-        u.wallet_address,
-        o.total_price,
-        o.status,
-        o.transaction_hash,
-        o.created_at,
-        o.shipping_name,
-        o.shipping_phone,
-        o.shipping_address,
-        o.note,
-        o.payment_status,
-        o.shipping_status,
-        oi.cake_id,
-        oi.quantity,
-        oi.price,
-        c.name,
-        c.image_url
-      FROM orders o
-      JOIN users u ON o.user_id = u.id
-      JOIN order_items oi ON o.id = oi.order_id
-      JOIN cakes c ON oi.cake_id = c.id
-      ORDER BY o.created_at DESC, o.id DESC
-    `);
-
+  SELECT
+    o.id AS order_id,
+    o.blockchain_order_index,
+    u.wallet_address,
+    o.total_price,
+    o.status,
+    o.transaction_hash,
+    o.created_at,
+    o.shipping_name,
+    o.shipping_phone,
+    o.shipping_address,
+    o.note,
+    o.payment_status,
+    o.shipping_status,
+    oi.cake_id,
+    oi.quantity,
+    oi.price,
+    c.name,
+    c.image_url
+  FROM orders o
+  JOIN users u ON o.user_id = u.id
+  JOIN order_items oi ON o.id = oi.order_id
+  JOIN cakes c ON oi.cake_id = c.id
+  ORDER BY o.created_at DESC, o.id DESC
+`);
     res.json(result.recordset);
   } catch (err) {
     console.error("Lỗi getAllOrders:", err);

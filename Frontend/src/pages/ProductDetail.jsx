@@ -204,46 +204,60 @@ function ProductDetail() {
       const blockchainId = Number(product.blockchain_id);
       const sqlCakeId = Number(product.id);
 
+      console.log("Cake blockchain_id:", blockchainId);
+
       if (!Number.isInteger(blockchainId) || blockchainId <= 0) {
-        alert("San pham nay chua duoc dong bo len blockchain");
+        alert("Sản phẩm này chưa được đồng bộ lên blockchain");
         return;
       }
 
       if (!Number.isInteger(sqlCakeId) || sqlCakeId <= 0) {
-        alert("Khong tim thay cake id trong SQL");
+        alert("Không tìm thấy cake id trong SQL");
         return;
       }
 
       if (!window.ethereum) {
-        alert("Vui long cai MetaMask");
+        alert("Vui lòng cài MetaMask");
         return;
       }
 
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
-
       const walletAddress = accounts[0];
 
       const contract = await getContractWithSigner();
 
-      let chainCake;
-      try {
-        chainCake = await contract.getCake(blockchainId);
-      } catch (chainErr) {
-        throw new Error(
-          "Cake nay chua duoc sync len blockchain. Vui long bao admin sync lai."
-        );
+      const chainCake = await contract.getCake(blockchainId);
+
+      if (!chainCake || Number(chainCake.id) <= 0) {
+        throw new Error("Cake này chưa có trên blockchain");
       }
 
       if (!chainCake.isAvailable) {
-        throw new Error("Cake nay dang tam het hang tren blockchain");
+        throw new Error("Cake này đang tạm hết hàng trên blockchain");
       }
 
       const value = chainCake.price * BigInt(quantity);
 
       const tx = await contract.orderCake(blockchainId, quantity, { value });
       const receipt = await tx.wait();
+
+      let blockchain_order_index = null;
+
+      for (const log of receipt.logs) {
+        try {
+          const parsed = contract.interface.parseLog(log);
+          if (parsed && parsed.name === "CakeOrdered") {
+            blockchain_order_index = Number(parsed.args.orderIndex);
+            break;
+          }
+        } catch (_) { }
+      }
+
+      if (blockchain_order_index == null) {
+        throw new Error("Không lấy được blockchain_order_index từ event CakeOrdered");
+      }
 
       const orderRes = await fetch("http://localhost:3000/api/orders", {
         method: "POST",
@@ -254,6 +268,7 @@ function ProductDetail() {
           wallet_address: walletAddress,
           total_price: Number(product.price) * quantity,
           transaction_hash: receipt.hash,
+          blockchain_order_index,
           shipping_name: null,
           shipping_phone: null,
           shipping_address: null,
@@ -271,25 +286,27 @@ function ProductDetail() {
       const orderData = await orderRes.json();
 
       if (!orderRes.ok) {
-        throw new Error(orderData.message || "Luu don hang that bai");
+        throw new Error(orderData.message || "Lưu đơn hàng thất bại");
       }
 
-      alert("Mua thanh cong");
-      console.log("Da luu don hang vao SQL:", orderData);
+      alert("Mua thành công");
+      console.log("Đã lưu đơn hàng vào SQL:", orderData);
     } catch (err) {
-      console.error("Loi khi mua:", err);
+      console.error("Lỗi khi mua:", err);
 
-      const raw = `${err?.shortMessage || ""} ${err?.reason || ""} ${err?.message || ""}`.toLowerCase();
-      let message = err?.message || "Loi khi mua bang MetaMask";
+      const raw =
+        `${err?.shortMessage || ""} ${err?.reason || ""} ${err?.message || ""}`.toLowerCase();
+
+      let message = err?.message || "Lỗi khi mua bằng MetaMask";
 
       if (raw.includes("cake not found")) {
-        message = "Cake nay chua co tren blockchain. Vui long bao admin sync lai.";
+        message = "Cake này chưa có trên blockchain. Vui lòng báo admin sync lại.";
       } else if (raw.includes("cake not available")) {
-        message = "Cake nay dang tam het hang tren blockchain";
+        message = "Cake này đang tạm hết hàng trên blockchain";
       } else if (raw.includes("not enough value")) {
-        message = "So tien gui len blockchain khong du, vui long thu lai.";
+        message = "Số tiền gửi lên blockchain không đủ, vui lòng thử lại.";
       } else if (ethers.isError(err, "ACTION_REJECTED")) {
-        message = "Ban da tu choi giao dich trong MetaMask.";
+        message = "Bạn đã từ chối giao dịch trong MetaMask.";
       }
 
       alert(message);

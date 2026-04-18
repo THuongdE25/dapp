@@ -143,7 +143,9 @@ contract BirthdayCakeShopSapphire {
 
         return result;
     }
-
+    function getMyOrderIndexes() public view returns (uint256[] memory) {
+    return userOrderIndexes[msg.sender];
+    }
     function markDelivered(uint256 _orderIndex) public onlyOwner {
         require(_orderIndex < orders.length, "Order not found");
         require(!orders[_orderIndex].delivered, "Already delivered");

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { getContractWithSigner } from "../contract/contract";
-
+import axios from "axios";
 function AdminOrders() {
 
    const [orders, setOrders] = useState([])
@@ -74,6 +74,24 @@ function AdminOrders() {
          setWithdrawing(true);
 
          const contract = await getContractWithSigner();
+         console.log("typeof contract.withdraw =", typeof contract.withdraw);
+         console.log(
+            "ABI has withdraw =",
+            contract.interface.fragments.some(
+               (f) => f.type === "function" && f.name === "withdraw"
+            )
+         );
+         console.log(
+            "All function names =",
+            contract.interface.fragments
+               .filter((f) => f.type === "function")
+               .map((f) => f.name)
+         );
+         const locked = await contract.lockedBalance();
+         const withdrawable = await contract.withdrawableBalance();
+
+         console.log("Locked balance:", locked.toString());
+         console.log("Withdrawable balance:", withdrawable.toString());
          const tx = await contract.withdraw();
 
          console.log("Withdraw tx:", tx.hash);
@@ -87,35 +105,33 @@ function AdminOrders() {
          setWithdrawing(false);
       }
    };
-   const handleShipOrder = async (orderId) => {
+
+   const handleShipOrder = async (order) => {
       try {
-         const res = await fetch(`http://localhost:3000/api/orders/${orderId}/shipping-status`, {
-            method: "PUT",
-            headers: {
-               "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ shipping_status: "shipping" }),
-         });
+         console.log("ORDER SHIP CLICK:", order);
 
-         const data = await res.json();
+         const blockchain_order_index = order.blockchain_order_index;
 
-         if (!res.ok) {
-            alert(data.message || "Cập nhật thất bại");
-            return;
+         if (blockchain_order_index == null) {
+            throw new Error("Thiếu blockchain_order_index");
          }
 
-         alert("Đơn hàng đã chuyển sang Đang giao hàng");
+         const contract = await getContractWithSigner();
+         const tx = await contract.markDelivered(blockchain_order_index);
+         await tx.wait();
 
-         setOrders((prev) =>
-            prev.map((item) =>
-               item.order_id === orderId
-                  ? { ...item, shipping_status: "shipping" }
-                  : item
-            )
+         const res = await axios.put(
+            `http://localhost:3000/api/orders/${order.order_id}/shipping-status`,
+            { shipping_status: "shipping" }
          );
-      } catch (error) {
-         console.error("Lỗi handleShipOrder:", error);
-         alert("Lỗi server");
+
+         console.log("Ship API response:", res.data);
+
+         alert("Đã giao hàng");
+         loadOrders();
+      } catch (err) {
+         console.error("Lỗi handleShipOrder:", err);
+         alert(err.response?.data?.message || err.message || "Lỗi server");
       }
    };
    return (
@@ -160,7 +176,7 @@ function AdminOrders() {
                            {o.shipping_status === "pending" && (
                               <button
                                  className="btn btn-primary me-2"
-                                 onClick={() => handleShipOrder(o.order_id)}
+                                 onClick={() => handleShipOrder(o)}
                               >
                                  🚚 Giao hàng
                               </button>
