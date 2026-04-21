@@ -49,6 +49,7 @@ const { connectDB } = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const cakeRoutes = require("./routes/cakeRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const cartRoutes = require("./routes/cartRoutes");
 
 const app = express();
 
@@ -62,6 +63,7 @@ connectDB();
 app.use("/api", authRoutes);
 app.use("/api/cakes", cakeRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/cart", cartRoutes);
 
 app.use((err, req, res, next) => {
   console.error("Server error:", err);

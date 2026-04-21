@@ -182,19 +182,45 @@ function ProductDetail() {
     fetchProduct();
   }, [id]);
 
-  const handleAddToCart = () => {
-    if (!product) return;
+  const handleAddToCart = async () => {
+    try {
+      if (!product) return;
 
-    addToCart({
-      id: product.id,
-      blockchain_id: product.blockchain_id,
-      blockchain_price: Number(product.blockchain_price) || Number(product.price) || 0,
-      name: product.name,
-      img: product.image_url || product.img,
-      price: Number(product.price) || 0,
-      quantity,
-      checked: true,
-    });
+      if (!window.ethereum) {
+        alert("Vui lòng cài MetaMask");
+        return;
+      }
+
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+
+      const walletAddress = accounts[0];
+
+      const res = await fetch("http://localhost:3000/api/cart", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          wallet_address: walletAddress,
+          cake_id: product.id,
+          quantity,
+          size,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Thêm vào giỏ thất bại");
+      }
+
+      alert("Đã thêm vào giỏ hàng");
+    } catch (err) {
+      console.error("Lỗi addToCart:", err);
+      alert(err.message || "Lỗi thêm vào giỏ");
+    }
   };
 
   const handleBuyNow = async () => {
