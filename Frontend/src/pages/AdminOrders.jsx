@@ -176,9 +176,14 @@ function AdminOrders() {
                            {o.shipping_status === "pending" && (
                               <button
                                  className="btn btn-primary me-2"
+                                 disabled={shippingId === o.order_id || o.status === "delivered"}
                                  onClick={() => handleShipOrder(o)}
                               >
-                                 🚚 Giao hàng
+                                 {shippingId === o.order_id
+                                    ? "⏳ Đang giao..."
+                                    : o.status === "delivered"
+                                       ? "✅ Đã giao hàng"
+                                       : "🚚 Giao hàng"}
                               </button>
                            )}
                         </div>
