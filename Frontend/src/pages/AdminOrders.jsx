@@ -5,6 +5,7 @@ function AdminOrders() {
 
    const [orders, setOrders] = useState([])
    const [withdrawing, setWithdrawing] = useState(false);
+   const [shippingId, setShippingId] = useState(null);
 
    const loadOrders = async () => {
       try {
@@ -106,8 +107,38 @@ function AdminOrders() {
       }
    };
 
+   // const handleShipOrder = async (order) => {
+   //    try {
+   //       console.log("ORDER SHIP CLICK:", order);
+
+   //       const blockchain_order_index = order.blockchain_order_index;
+
+   //       if (blockchain_order_index == null) {
+   //          throw new Error("Thiếu blockchain_order_index");
+   //       }
+
+   //       const contract = await getContractWithSigner();
+   //       const tx = await contract.markDelivered(blockchain_order_index);
+   //       await tx.wait();
+
+   //       const res = await axios.put(
+   //          `http://localhost:3000/api/orders/${order.order_id}/shipping-status`,
+   //          { shipping_status: "shipping" }
+   //       );
+
+   //       console.log("Ship API response:", res.data);
+
+   //       alert("Đã giao hàng");
+   //       loadOrders();
+   //    } catch (err) {
+   //       console.error("Lỗi handleShipOrder:", err);
+   //       alert(err.response?.data?.message || err.message || "Lỗi server");
+   //    }
+   // };
    const handleShipOrder = async (order) => {
       try {
+         setShippingId(order.order_id);
+
          console.log("ORDER SHIP CLICK:", order);
 
          const blockchain_order_index = order.blockchain_order_index;
@@ -132,6 +163,8 @@ function AdminOrders() {
       } catch (err) {
          console.error("Lỗi handleShipOrder:", err);
          alert(err.response?.data?.message || err.message || "Lỗi server");
+      } finally {
+         setShippingId(null);
       }
    };
    return (
@@ -176,7 +209,7 @@ function AdminOrders() {
                            {o.shipping_status === "pending" && (
                               <button
                                  className="btn btn-primary me-2"
-                                 disabled={shippingId === o.order_id || o.status === "delivered"}
+                                 disabled={shippingId === o.order_id || o.shipping_status === "delivered"}
                                  onClick={() => handleShipOrder(o)}
                               >
                                  {shippingId === o.order_id
